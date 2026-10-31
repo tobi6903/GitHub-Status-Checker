@@ -24,13 +24,14 @@ const REVIEW: Record<NonNullable<Item["reviewDecision"]>, [string, string]> = {
   REVIEW_REQUIRED: ["Review required", "bg-amber-500/15 text-amber-600"],
 };
 
-function whenLabel(item: Item): string {
-  if (item.mergedAt) return `merged ${timeAgo(item.mergedAt)}`;
-  if (item.closedAt) return `closed ${timeAgo(item.closedAt)}`;
-  return `updated ${timeAgo(item.updatedAt)}`;
+function whenLabel(item: Item, now: number): string {
+  if (item.mergedAt) return `merged ${timeAgo(item.mergedAt, now)}`;
+  if (item.closedAt) return `closed ${timeAgo(item.closedAt, now)}`;
+  return `updated ${timeAgo(item.updatedAt, now)}`;
 }
 
-export function ItemList({ items, empty }: { items: Item[]; empty: string }) {
+// `now` comes from the server so the server render and client hydration agree on "5 minutes ago".
+export function ItemList({ items, empty, now }: { items: Item[]; empty: string; now: number }) {
   if (items.length === 0) {
     return <p className="rounded-lg border border-dashed p-8 text-center text-sm opacity-60">{empty}</p>;
   }
@@ -62,7 +63,7 @@ export function ItemList({ items, empty }: { items: Item[]; empty: string }) {
             ))}
           </div>
           <p className="text-xs opacity-60">
-            <span className="font-mono">{item.repo}</span> #{item.number} · {whenLabel(item)}
+            <span className="font-mono">{item.repo}</span> #{item.number} · {whenLabel(item, now)}
             {item.author ? ` · by ${item.author}` : ""}
             {item.comments > 0 ? ` · ${item.comments} comments` : ""}
           </p>

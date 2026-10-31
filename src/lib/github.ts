@@ -25,6 +25,8 @@ export type Item = {
 export type ContributionDay = { date: string; count: number; color: string };
 
 export type Dashboard = {
+  /** Epoch ms when this data was fetched; used as "now" for relative times. */
+  fetchedAt: number;
   profile: {
     login: string;
     name: string | null;
@@ -167,6 +169,7 @@ export async function fetchDashboard(accessToken: string, login: string): Promis
     const v = data.viewer;
     const c = v.contributionsCollection;
     return {
+      fetchedAt: Date.now(),
       profile: {
         login: v.login,
         name: v.name,

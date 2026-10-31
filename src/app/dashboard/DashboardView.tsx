@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { signIn, signOut } from "@/auth";
 import { ContributionGraph } from "@/components/ContributionGraph";
-import { ItemList } from "@/components/ItemList";
+import { DashboardTabs, type TabData } from "@/components/DashboardTabs";
+import type { RepoSummary } from "@/components/RepoCards";
 import {
   fetchDashboard,
   GitHubAuthError,
@@ -43,12 +43,6 @@ function sectionFor(data: Dashboard, tab: TabId): Section {
 
 const when = (i: Item) => i.mergedAt ?? i.closedAt ?? i.updatedAt;
 
-function href(tab: TabId, repo?: string) {
-  const params = new URLSearchParams({ tab });
-  if (repo) params.set("repo", repo);
-  return `/dashboard?${params}`;
-}
-
 function ReconnectCard() {
   return (
     <main className="mx-auto max-w-md p-12 text-center">
@@ -88,22 +82,33 @@ export async function DashboardView({
   const sp = await searchParams;
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const tab = TABS.find((t) => t.id === first(sp.tab))?.id ?? "prs";
-  const repo = first(sp.repo);
 
-  const section = sectionFor(data, tab);
-  const items = repo ? section.items.filter((i) => i.repo === repo) : section.items;
+  const tabs: TabData[] = TABS.map((t) => {
+    const section = sectionFor(data, t.id);
+    return { ...t, total: section.total, items: section.items, showCount: t.id !== "history" };
+  });
 
-  // One place for every repo: how much is in flight in each one right now.
-  const byRepo = new Map<string, number>();
+  // One place for every repo: what is in flight in each one right now.
+  const byRepo = new Map<string, RepoSummary>();
   const seen = new Set<string>();
-  for (const s of [data.openPRs, data.reviewRequests, data.issuesRaised, data.issuesAssigned]) {
+  const tally = (s: Section, field: "prs" | "reviews" | "issues") => {
     for (const i of s.items) {
-      if (seen.has(i.id)) continue;
-      seen.add(i.id);
-      byRepo.set(i.repo, (byRepo.get(i.repo) ?? 0) + 1);
+      if (seen.has(`${field}:${i.id}`)) continue; // an issue can be both raised by and assigned to you
+      seen.add(`${field}:${i.id}`);
+      const r = byRepo.get(i.repo) ?? { name: i.repo, prs: 0, reviews: 0, issues: 0 };
+      r[field]++;
+      byRepo.set(i.repo, r);
     }
-  }
-  const repos = [...byRepo].sort((a, b) => b[1] - a[1]);
+  };
+  tally(data.openPRs, "prs");
+  tally(data.reviewRequests, "reviews");
+  tally(data.issuesRaised, "issues");
+  tally(data.issuesAssigned, "issues");
+  const total = (r: RepoSummary) => r.prs + r.reviews + r.issues;
+  const repos = [...byRepo.values()].sort((a, b) => total(b) - total(a) || a.name.localeCompare(b.name));
+
+  const requestedRepo = first(sp.repo);
+  const repo = repos.some((r) => r.name === requestedRepo) ? requestedRepo : undefined;
 
   const { profile, stats } = data;
   const statCards = [
@@ -147,70 +152,9 @@ export async function DashboardView({
         ))}
       </section>
 
-      <section className="rounded-lg border p-4">
-        <h2 className="mb-3 text-sm font-medium">
-          {stats.total.toLocaleString()} contributions in the last year
-        </h2>
-        <ContributionGraph weeks={data.calendar} />
-      </section>
+      <ContributionGraph weeks={data.calendar} />
 
-      {repos.length > 0 && (
-        <section>
-          <h2 className="mb-2 text-sm font-medium">Active repositories</h2>
-          <div className="flex flex-wrap gap-2">
-            {repos.map(([name, count]) => (
-              <Link
-                key={name}
-                href={href(tab, name === repo ? undefined : name)}
-                className={`rounded-full border px-3 py-1 text-xs font-mono ${
-                  name === repo ? "bg-foreground text-background" : "hover:bg-foreground/5"
-                }`}
-              >
-                {name} · {count}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="flex flex-col gap-4">
-        <nav className="flex flex-wrap gap-1 border-b" aria-label="Views">
-          {TABS.map((t) => {
-            const count = t.id === "history" ? null : sectionFor(data, t.id).total;
-            const active = t.id === tab;
-            return (
-              <Link
-                key={t.id}
-                href={href(t.id, repo)}
-                aria-current={active ? "page" : undefined}
-                className={`-mb-px border-b-2 px-3 py-2 text-sm ${
-                  active ? "border-foreground font-medium" : "border-transparent opacity-60 hover:opacity-100"
-                }`}
-              >
-                {t.label}
-                {count !== null && <span className="ml-1.5 text-xs opacity-60">{count}</span>}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {repo && (
-          <p className="text-xs opacity-70">
-            Filtered to <span className="font-mono">{repo}</span> ·{" "}
-            <Link href={href(tab)} className="underline">
-              clear
-            </Link>
-          </p>
-        )}
-
-        <ItemList items={items} empty={TABS.find((t) => t.id === tab)!.empty} />
-
-        {section.total > section.items.length && (
-          <p className="text-xs opacity-60">
-            Showing the {section.items.length} most recent of {section.total}.
-          </p>
-        )}
-      </section>
+      <DashboardTabs tabs={tabs} repos={repos} initialTab={tab} initialRepo={repo} now={data.fetchedAt} />
     </main>
   );
 }
