@@ -10,14 +10,12 @@ export type TabData = {
   label: string;
   empty: string;
   total: number;
-  /** Show the total next to the label. */
   showCount: boolean;
   items: Item[];
 };
 
-// Tabs and the repo filter live in client state, not in navigation: switching
-// never re-fetches from GitHub or resets the scroll position. The URL is kept
-// in sync with replaceState so a reload or a shared link restores the view.
+// Tab and repo filter are plain client state, so switching never refetches or jumps the scroll.
+// The URL is updated with replaceState so reloads and shared links keep the view.
 export function DashboardTabs({
   tabs,
   repos,
@@ -60,7 +58,9 @@ export function DashboardTabs({
                 onClick={() => update(t.id, repo)}
                 aria-current={active ? "page" : undefined}
                 className={`-mb-px cursor-pointer border-b-2 px-3 py-2 text-sm ${
-                  active ? "border-foreground font-medium" : "border-transparent opacity-60 hover:opacity-100"
+                  active
+                    ? "border-foreground font-medium"
+                    : "border-transparent opacity-60 hover:opacity-100"
                 }`}
               >
                 {t.label}
@@ -73,7 +73,11 @@ export function DashboardTabs({
         {repo && (
           <p className="text-xs opacity-70">
             Filtered to <span className="font-mono">{repo}</span> ·{" "}
-            <button type="button" onClick={() => update(tab.id, undefined)} className="cursor-pointer underline">
+            <button
+              type="button"
+              onClick={() => update(tab.id, undefined)}
+              className="cursor-pointer underline"
+            >
               clear
             </button>
           </p>

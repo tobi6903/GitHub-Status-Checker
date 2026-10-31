@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { signIn, signOut } from "@/auth";
 import { ContributionGraph } from "@/components/ContributionGraph";
 import { DashboardTabs, type TabData } from "@/components/DashboardTabs";
@@ -33,8 +34,8 @@ function sectionFor(data: Dashboard, tab: TabId): Section {
     case "assigned":
       return data.issuesAssigned;
     case "history": {
-      const items = [...data.mergedPRs.items, ...data.closedIssues.items].sort(
-        (a, b) => when(b).localeCompare(when(a)),
+      const items = [...data.mergedPRs.items, ...data.closedIssues.items].sort((a, b) =>
+        when(b).localeCompare(when(a)),
       );
       return { total: data.mergedPRs.total + data.closedIssues.total, items };
     }
@@ -47,7 +48,9 @@ function ReconnectCard() {
   return (
     <main className="mx-auto max-w-md p-12 text-center">
       <h1 className="text-xl font-semibold">Your GitHub session expired</h1>
-      <p className="mt-2 text-sm opacity-70">GitHub rejected the saved token. Sign in again to continue.</p>
+      <p className="mt-2 text-sm opacity-70">
+        GitHub rejected the saved token. Sign in again to continue.
+      </p>
       <form
         className="mt-6"
         action={async () => {
@@ -88,7 +91,7 @@ export async function DashboardView({
     return { ...t, total: section.total, items: section.items, showCount: t.id !== "history" };
   });
 
-  // One place for every repo: what is in flight in each one right now.
+  // Open work per repo, for the repo cards.
   const byRepo = new Map<string, RepoSummary>();
   const seen = new Set<string>();
   const tally = (s: Section, field: "prs" | "reviews" | "issues") => {
@@ -105,7 +108,9 @@ export async function DashboardView({
   tally(data.issuesRaised, "issues");
   tally(data.issuesAssigned, "issues");
   const total = (r: RepoSummary) => r.prs + r.reviews + r.issues;
-  const repos = [...byRepo.values()].sort((a, b) => total(b) - total(a) || a.name.localeCompare(b.name));
+  const repos = [...byRepo.values()].sort(
+    (a, b) => total(b) - total(a) || a.name.localeCompare(b.name),
+  );
 
   const requestedRepo = first(sp.repo);
   const repo = repos.some((r) => r.name === requestedRepo) ? requestedRepo : undefined;
@@ -125,21 +130,35 @@ export async function DashboardView({
         <img src={profile.avatarUrl} alt="" className="size-16 rounded-full" />
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold">{profile.name ?? profile.login}</h1>
-          <a href={profile.url} target="_blank" rel="noreferrer" className="text-sm opacity-70 hover:underline">
+          <a
+            href={profile.url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm opacity-70 hover:underline"
+          >
             @{profile.login}
           </a>
           {profile.bio && <p className="mt-1 text-sm opacity-80">{profile.bio}</p>}
           <p className="mt-1 text-xs opacity-60">
-            {profile.followers} followers · {profile.following} following · {profile.publicRepos} public repos
+            {profile.followers} followers · {profile.following} following · {profile.publicRepos}{" "}
+            public repos
           </p>
         </div>
+        <Link
+          href="/ai/standup"
+          className="rounded-lg border px-3 py-1.5 text-sm hover:bg-foreground/5"
+        >
+          ✨ AI assistant
+        </Link>
         <form
           action={async () => {
             "use server";
             await signOut({ redirectTo: "/" });
           }}
         >
-          <button className="rounded-lg border px-3 py-1.5 text-sm hover:bg-foreground/5">Sign out</button>
+          <button className="rounded-lg border px-3 py-1.5 text-sm hover:bg-foreground/5">
+            Sign out
+          </button>
         </form>
       </header>
 
@@ -154,7 +173,13 @@ export async function DashboardView({
 
       <ContributionGraph weeks={data.calendar} />
 
-      <DashboardTabs tabs={tabs} repos={repos} initialTab={tab} initialRepo={repo} now={data.fetchedAt} />
+      <DashboardTabs
+        tabs={tabs}
+        repos={repos}
+        initialTab={tab}
+        initialRepo={repo}
+        now={data.fetchedAt}
+      />
     </main>
   );
 }

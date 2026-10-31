@@ -2,8 +2,7 @@ import type { ContributionDay } from "@/lib/github";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// Literal class names so Tailwind can see them. Uses opacity, not fixed hex,
-// so the graph looks right in both light and dark mode.
+// Tailwind needs the full class names. Opacity (not fixed colours) keeps this readable in dark mode.
 const LEVELS = [
   "bg-foreground/10",
   "bg-emerald-500/30",
@@ -58,12 +57,13 @@ export function ContributionGraph({ weeks }: { weeks: ContributionDay[][] }) {
   const fmt = new Intl.DateTimeFormat("en", { month: "short", year: "numeric", timeZone: "UTC" });
   const range = `${fmt.format(new Date(days[0].date))} – ${fmt.format(new Date(days[days.length - 1].date))}`;
 
-  // Month label above the first week column of each month. Drop the first one
-  // when the next follows right behind it, otherwise the two overlap.
+  // Month labels go above the first week of each month. Skip the first one if the next is right
+  // behind it, or they overlap.
   const labels: { week: number; text: string }[] = [];
   weeks.forEach((week, i) => {
     const m = monthIndex(week[0].date);
-    if (i === 0 || m !== monthIndex(weeks[i - 1][0].date)) labels.push({ week: i, text: MONTHS[m] });
+    if (i === 0 || m !== monthIndex(weeks[i - 1][0].date))
+      labels.push({ week: i, text: MONTHS[m] });
   });
   if (labels.length > 1 && labels[1].week - labels[0].week < 3) labels.shift();
   const labelAt = new Map(labels.map((l) => [l.week, l.text]));
@@ -72,7 +72,8 @@ export function ContributionGraph({ weeks }: { weeks: ContributionDay[][] }) {
     <section className="rounded-xl border p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-base font-semibold">
-          <span className="tabular-nums">{total.toLocaleString()}</span> contributions in the last year
+          <span className="tabular-nums">{total.toLocaleString()}</span> contributions in the last
+          year
         </h2>
         <p className="text-xs opacity-60">{range}</p>
       </div>
@@ -88,7 +89,9 @@ export function ContributionGraph({ weeks }: { weeks: ContributionDay[][] }) {
           const isPeak = m.total === peak && peak > 0;
           return (
             <div key={m.key} className="flex flex-col items-center gap-1.5">
-              <span className={`text-xs tabular-nums ${m.total === 0 ? "opacity-40" : "font-medium"}`}>
+              <span
+                className={`text-xs tabular-nums ${m.total === 0 ? "opacity-40" : "font-medium"}`}
+              >
                 {m.total}
               </span>
               <div className="flex h-24 w-full items-end">
@@ -110,7 +113,10 @@ export function ContributionGraph({ weeks }: { weeks: ContributionDay[][] }) {
       {/* Day by day */}
       <div className="overflow-x-auto pb-1">
         <div className="flex w-max" style={{ gap: GAP }}>
-          <div className="flex flex-col pr-1 text-[10px] opacity-50" style={{ gap: GAP, paddingTop: CELL + GAP }}>
+          <div
+            className="flex flex-col pr-1 text-[10px] opacity-50"
+            style={{ gap: GAP, paddingTop: CELL + GAP }}
+          >
             {["", "Mon", "", "Wed", "", "Fri", ""].map((d, i) => (
               <span key={i} style={{ height: CELL, lineHeight: `${CELL}px` }}>
                 {d}
@@ -151,7 +157,11 @@ export function ContributionGraph({ weeks }: { weeks: ContributionDay[][] }) {
       <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] opacity-60">
         Less
         {LEVELS.map((cls) => (
-          <span key={cls} className={`rounded-[3px] ${cls}`} style={{ width: CELL, height: CELL }} />
+          <span
+            key={cls}
+            className={`rounded-[3px] ${cls}`}
+            style={{ width: CELL, height: CELL }}
+          />
         ))}
         More
       </div>

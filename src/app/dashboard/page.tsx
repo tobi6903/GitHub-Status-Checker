@@ -5,7 +5,10 @@ export const metadata = { title: "Dashboard · Git Status" };
 
 function Skeleton() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl animate-pulse flex-col gap-8 p-6" aria-busy="true">
+    <main
+      className="mx-auto flex w-full max-w-5xl animate-pulse flex-col gap-8 p-6"
+      aria-busy="true"
+    >
       <div className="flex items-center gap-4">
         <div className="size-16 rounded-full bg-foreground/10" />
         <div className="h-10 w-48 rounded bg-foreground/10" />

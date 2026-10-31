@@ -13,7 +13,15 @@ function Count({ n, one, many, tone }: { n: number; one: string; many: string; t
   );
 }
 
-function RepoCard({ repo, active, onSelect }: { repo: RepoSummary; active: boolean; onSelect: () => void }) {
+function RepoCard({
+  repo,
+  active,
+  onSelect,
+}: {
+  repo: RepoSummary;
+  active: boolean;
+  onSelect: () => void;
+}) {
   const [owner, name] = repo.name.split("/");
   return (
     <li className="relative">
@@ -40,7 +48,12 @@ function RepoCard({ repo, active, onSelect }: { repo: RepoSummary; active: boole
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
             <Count n={repo.prs} one="PR" many="PRs" tone="bg-green-500/15 text-green-600" />
-            <Count n={repo.reviews} one="review" many="reviews" tone="bg-amber-500/15 text-amber-600" />
+            <Count
+              n={repo.reviews}
+              one="review"
+              many="reviews"
+              tone="bg-amber-500/15 text-amber-600"
+            />
             <Count n={repo.issues} one="issue" many="issues" tone="bg-sky-500/15 text-sky-600" />
           </div>
         </div>
@@ -72,7 +85,12 @@ export function RepoCards({
 
   const render = (list: RepoSummary[]) =>
     list.map((r) => (
-      <RepoCard key={r.name} repo={r} active={r.name === active} onSelect={() => onSelect(r.name === active ? undefined : r.name)} />
+      <RepoCard
+        key={r.name}
+        repo={r}
+        active={r.name === active}
+        onSelect={() => onSelect(r.name === active ? undefined : r.name)}
+      />
     ));
   const grid = "grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
   const rest = repos.slice(VISIBLE);

@@ -7,7 +7,7 @@ const COOKIE_NAMES = ["__Secure-authjs.session-token", "authjs.session-token"];
 
 export type GitHubSession = { accessToken: string; login: string };
 
-/** Reads the GitHub token + login out of the encrypted session cookie (server only). */
+// Reads the GitHub token and login from the session cookie. Server only.
 export async function getGitHubSession(): Promise<GitHubSession | null> {
   const secret = process.env.AUTH_SECRET;
   if (!secret) return null;

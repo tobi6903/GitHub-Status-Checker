@@ -1,5 +1,6 @@
 import "server-only";
 import { graphql, GraphqlResponseError } from "@octokit/graphql";
+import { ITEM_FIELDS, SEARCH_QUERY } from "./github-queries";
 
 export type Label = { name: string; color: string };
 
@@ -25,7 +26,7 @@ export type Item = {
 export type ContributionDay = { date: string; count: number; color: string };
 
 export type Dashboard = {
-  /** Epoch ms when this data was fetched; used as "now" for relative times. */
+  // when the data was fetched; used as "now" for relative times
   fetchedAt: number;
   profile: {
     login: string;
@@ -53,28 +54,10 @@ export type Dashboard = {
   closedIssues: Section;
 };
 
-/** `total` is GitHub's full count; `items` is capped at PAGE_SIZE. */
+// total is GitHub's full count; items is capped at PAGE_SIZE
 export type Section = { total: number; items: Item[] };
 
 const PAGE_SIZE = 50;
-
-// `state` has a different enum type on Issue and PullRequest, so each gets its own alias.
-const ITEM_FIELDS = /* GraphQL */ `
-  fragment ItemFields on Issue {
-    __typename id number title url issueState: state createdAt updatedAt closedAt
-    repository { nameWithOwner }
-    author { login }
-    comments { totalCount }
-    labels(first: 5) { nodes { name color } }
-  }
-  fragment PRFields on PullRequest {
-    __typename id number title url prState: state isDraft reviewDecision createdAt updatedAt closedAt mergedAt
-    repository { nameWithOwner }
-    author { login }
-    comments { totalCount }
-    labels(first: 5) { nodes { name color } }
-  }
-`;
 
 const section = (alias: string) => /* GraphQL */ `
   ${alias}: search(query: $${alias}, type: ISSUE, first: ${PAGE_SIZE}) {
@@ -116,7 +99,9 @@ const QUERY = /* GraphQL */ `
 `;
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- raw GraphQL payload, mapped to typed shapes below */
-function toItem(node: any): Item | null {
+type GraphqlData = any;
+
+export function toItem(node: any): Item | null {
   // A search node can be empty if a fragment type didn't match (e.g. a Discussion).
   if (!node?.id) return null;
   const isPR = node.__typename === "PullRequest";
@@ -140,7 +125,7 @@ function toItem(node: any): Item | null {
   };
 }
 
-function toSection(search: any): Section {
+export function toSection(search: any): Section {
   return {
     total: search.issueCount,
     items: search.nodes.map(toItem).filter((i: Item | null): i is Item => i !== null),
@@ -162,7 +147,7 @@ export async function fetchDashboard(accessToken: string, login: string): Promis
   };
 
   try {
-    const data = await graphql<any>(QUERY, { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const data = await graphql<GraphqlData>(QUERY, {
       ...variables,
       headers: { authorization: `bearer ${accessToken}` },
     });
@@ -189,7 +174,11 @@ export async function fetchDashboard(accessToken: string, login: string): Promis
       },
       calendar: c.contributionCalendar.weeks.map(
         (w: { contributionDays: { date: string; contributionCount: number; color: string }[] }) =>
-          w.contributionDays.map((d) => ({ date: d.date, count: d.contributionCount, color: d.color })),
+          w.contributionDays.map((d) => ({
+            date: d.date,
+            count: d.contributionCount,
+            color: d.color,
+          })),
       ),
       openPRs: toSection(data.openPRs),
       reviewRequests: toSection(data.reviewRequests),
@@ -199,13 +188,31 @@ export async function fetchDashboard(accessToken: string, login: string): Promis
       closedIssues: toSection(data.closedIssues),
     };
   } catch (err) {
-    // Revoked/expired token comes back as HTTP 401 from the GraphQL endpoint.
-    if ((err as { status?: number }).status === 401) {
-      throw new GitHubAuthError("GitHub rejected the access token");
-    }
-    if (err instanceof GraphqlResponseError) {
-      throw new Error(err.errors?.map((e) => e.message).join("; ") ?? "GitHub GraphQL error");
-    }
-    throw err;
+    throw mapGraphqlError(err);
   }
+}
+
+// Runs one GitHub search query and returns typed items.
+export async function searchItems(accessToken: string, q: string, first = 20): Promise<Section> {
+  try {
+    const data = await graphql<GraphqlData>(SEARCH_QUERY, {
+      q,
+      first,
+      headers: { authorization: `bearer ${accessToken}` },
+    });
+    return toSection(data.search);
+  } catch (err) {
+    throw mapGraphqlError(err);
+  }
+}
+
+// A revoked or expired token shows up as HTTP 401. Other GraphQL errors become a plain Error
+// carrying GitHub's message.
+export function mapGraphqlError(err: unknown): unknown {
+  if ((err as { status?: number }).status === 401)
+    return new GitHubAuthError("GitHub rejected the access token");
+  if (err instanceof GraphqlResponseError) {
+    return new Error(err.errors?.map((e) => e.message).join("; ") ?? "GitHub GraphQL error");
+  }
+  return err;
 }

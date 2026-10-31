@@ -2,14 +2,13 @@ import type { Item } from "@/lib/github";
 import { timeAgo } from "@/lib/format";
 
 function Badge({ children, tone }: { children: React.ReactNode; tone: string }) {
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{children}</span>
-  );
+  return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{children}</span>;
 }
 
 function StateBadge({ item }: { item: Item }) {
   if (item.kind === "pr") {
-    if (item.state === "MERGED") return <Badge tone="bg-purple-500/15 text-purple-500">Merged</Badge>;
+    if (item.state === "MERGED")
+      return <Badge tone="bg-purple-500/15 text-purple-500">Merged</Badge>;
     if (item.state === "CLOSED") return <Badge tone="bg-red-500/15 text-red-500">Closed</Badge>;
     if (item.isDraft) return <Badge tone="bg-zinc-500/15 text-zinc-500">Draft</Badge>;
     return <Badge tone="bg-green-500/15 text-green-600">Open</Badge>;
@@ -30,10 +29,12 @@ function whenLabel(item: Item, now: number): string {
   return `updated ${timeAgo(item.updatedAt, now)}`;
 }
 
-// `now` comes from the server so the server render and client hydration agree on "5 minutes ago".
+// `now` comes from the server so server and client agree on "5 minutes ago" when hydrating.
 export function ItemList({ items, empty, now }: { items: Item[]; empty: string; now: number }) {
   if (items.length === 0) {
-    return <p className="rounded-lg border border-dashed p-8 text-center text-sm opacity-60">{empty}</p>;
+    return (
+      <p className="rounded-lg border border-dashed p-8 text-center text-sm opacity-60">{empty}</p>
+    );
   }
   return (
     <ul className="divide-y rounded-lg border">
