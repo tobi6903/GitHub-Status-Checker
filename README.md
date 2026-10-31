@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Git Status
 
-## Getting Started
+One dashboard for everything you have going on in GitHub, across all your repositories:
 
-First, run the development server:
+- open pull requests you authored (with draft / review-decision badges)
+- PRs waiting for your review
+- issues you raised, and issues assigned to you
+- history: merged PRs and closed issues
+- contribution stats and a year-long activity graph
+- an "active repositories" strip to filter every view down to one repo
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Built with Next.js 16 (App Router, Cache Components), TypeScript, Tailwind CSS v4,
+Auth.js (GitHub sign-in) and the GitHub GraphQL API. A single GraphQL request fetches
+all repos at once, using GitHub search (`author:`, `assignee:`, `review-requested:`).
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Create a GitHub OAuth App at <https://github.com/settings/developers>
+   - Homepage URL: `http://localhost:3000`
+   - Authorization callback URL: `http://localhost:3000/api/auth/callback/github`
+2. Copy the env template and fill it in:
+   ```bash
+   cp .env.example .env.local
+   openssl rand -base64 33   # paste as AUTH_SECRET
+   # paste the OAuth app's Client ID / secret as AUTH_GITHUB_ID / AUTH_GITHUB_SECRET
+   ```
+3. Run it:
+   ```bash
+   npm install
+   npm run dev
+   ```
+   Open <http://localhost:3000> and sign in with GitHub.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Notes
 
-## Learn More
+- The default OAuth scope is `read:user repo`, so private repos are included. Set
+  `GITHUB_OAUTH_SCOPE=read:user` for public data only.
+- The GitHub access token lives only in the encrypted session cookie and is read on the
+  server. It is never exposed through `/api/auth/session`.
+- Each list shows the 50 most recently updated items; the tab count is the real total.
+- Org-owned repos with OAuth app restrictions need the app approved by the org
+  (Settings → Third-party access) before their items appear.
+- Deploying: set `AUTH_URL` (or deploy on Vercel), and update the OAuth callback URL.
 
-To learn more about Next.js, take a look at the following resources:
+## Layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Path | What |
+| --- | --- |
+| `src/auth.ts` | Auth.js config (GitHub provider) |
+| `src/proxy.ts` | Redirects signed-out visitors away from `/dashboard` |
+| `src/lib/github.ts` | The GraphQL query and typed mapping |
+| `src/lib/session.ts` | Server-only access to the token inside the session cookie |
+| `src/app/dashboard/` | Dashboard page, view, and error boundary |
