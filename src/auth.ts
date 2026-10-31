@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 
+
 // "repo" is what lets private repos show up. Use just "read:user" for public data only.
 const scope = process.env.GITHUB_OAUTH_SCOPE ?? "read:user repo";
 
